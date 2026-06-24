@@ -93,10 +93,11 @@ thead th.agent-col{background:var(--nuit-mid);text-align:left;position:sticky;le
 tbody tr:nth-child(even) td{background:#f9f9f9}
 tbody td.agent-col{font-weight:700;position:sticky;left:0;background:#fff;z-index:1;border-right:2px solid #ccc}
 tbody tr:nth-child(even) td.agent-col{background:#f9f9f9}
-.cell-dispo{background:var(--vert-light)!important;color:var(--vert);text-align:center;font-size:.7rem;font-weight:700}
+.cell-dispo{background:var(--vert-light)!important;color:var(--vert);text-align:center;font-size:.7rem;font-weight:700;cursor:pointer}
 .cell-indispo{background:var(--indispo-light)!important;color:var(--indispo);text-align:center;font-size:.7rem;font-weight:700}
-.cell-rempl{background:#fef9e7!important;color:#935116;text-align:center;font-size:.65rem;font-weight:700}
+.cell-rempl{background:#fef9e7!important;color:#935116;text-align:center;font-size:.65rem;font-weight:700;cursor:pointer}
 .cell-vide{text-align:center;color:#ccc}
+.cell-selec{background:#ffe000!important;color:#5a4000!important;text-align:center;font-size:.7rem;font-weight:900;cursor:pointer;box-shadow:inset 0 0 0 2px #c8a800;}
 
 /* LÉGENDE */
 .legende{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:.73rem}
@@ -219,8 +220,9 @@ tfoot td.ok{color:#82e0aa}
       <span class="leg"><span class="leg-dot" style="background:var(--vert)"></span>Dispo</span>
       <span class="leg"><span class="leg-dot" style="background:var(--indispo)"></span>Indispo</span>
       <span class="leg"><span class="leg-dot" style="background:var(--or)"></span>Rempl.</span>
-      <span class="leg"><span class="leg-dot" style="background:#eee;border:1px solid #ccc"></span>—</span>
+      <span class="leg"><span class="leg-dot" style="background:#ffe000;border:1px solid #c8a800"></span>Sélectionné</span>
     </div>
+    <button class="btn-sm" style="background:#ffe000;color:#5a4000;font-weight:800;margin-top:6px" onclick="resetSelection()">🔄 Effacer la sélection</button>
   </div>
 
   <div class="card" style="padding:10px">
@@ -309,9 +311,10 @@ function nuitsduMois(y,m){
 }
 
 // ══════════════ ÉTAT ══════════════
-let agentConnecte=null; // {id, nom, grade}
+let agentConnecte=null;
 let listeAgents=[];
-let dispoAgent={}; // { "2025-07-01": { statut:"dispo"|"indispo"|"remplacement", type?:"prend"|"echange", avec?:"NOM" } }
+let dispoAgent={};
+let cellsSelectionnees=new Set(); // clés "agentId_date"
 
 // Mois affiché agent
 let moisAgent = (()=>{const d=new Date(); return {y:d.getFullYear(),m:d.getMonth()+1<12?d.getMonth()+1:d.getMonth(), mIdx: d.getMonth()+1<12?d.getMonth()+1:d.getMonth()};})();
@@ -559,18 +562,20 @@ async function chargerTableauChef(){
     html+=`<tr><td class="agent-col">${agent.grade}<br><strong>${agent.nom}</strong></td>`;
     nuits.forEach(d=>{
       const key=d.toISOString().slice(0,10);
+      const cellKey=`${agent.id}__${key}`;
+      const selec=cellsSelectionnees.has(cellKey);
       const n=rec?.nuits?.[key];
       if(!n||!n.statut){
         html+=`<td class="cell-vide">—</td>`;
       } else if(n.statut==='dispo'){
         totaux[key]++;
-        html+=`<td class="cell-dispo">✓</td>`;
+        html+=`<td class="${selec?'cell-selec':'cell-dispo'}" onclick="toggleSelec('${cellKey}',this)">✓</td>`;
       } else if(n.statut==='indispo'){
         html+=`<td class="cell-indispo">✗</td>`;
       } else if(n.statut==='remplacement'){
         totaux[key]++;
         const label=n.type==='echange'?`⇄${n.avec||'?'}`:`▶${n.avec||'?'}`;
-        html+=`<td class="cell-rempl" title="${n.type==='echange'?'Échange':'Prend nuit de'} ${n.avec||''}">${label}</td>`;
+        html+=`<td class="${selec?'cell-selec':'cell-rempl'}" onclick="toggleSelec('${cellKey}',this)" title="${n.type==='echange'?'Échange':'Prend nuit de'} ${n.avec||''}">${label}</td>`;
       }
     });
     html+='</tr>';
@@ -616,6 +621,24 @@ window.verifierCode=function(){
     document.getElementById('admin-zone').style.display='block';
     majListeAdmin();
   } else { toast('❌ Code incorrect'); }
+};
+
+window.toggleSelec=function(cellKey,td){
+  if(cellsSelectionnees.has(cellKey)){
+    cellsSelectionnees.delete(cellKey);
+    td.className=td.className.includes('rempl')||td.textContent.includes('⇄')||td.textContent.includes('▶')?'cell-rempl':'cell-dispo';
+  } else {
+    cellsSelectionnees.add(cellKey);
+    td.className='cell-selec';
+  }
+};
+
+window.resetSelection=function(){
+  cellsSelectionnees.clear();
+  document.querySelectorAll('.cell-selec').forEach(td=>{
+    td.className='cell-dispo';
+  });
+  toast('🔄 Sélection effacée');
 };
 
 window.ajouterSPV=async function(){
