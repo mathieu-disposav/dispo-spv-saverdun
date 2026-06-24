@@ -112,6 +112,15 @@ tbody tr:nth-child(even) td.agent-col{background:#f9f9f9}
 .add-form button{white-space:nowrap}
 .admin-lock{text-align:center;padding:30px 20px}
 .admin-lock input{max-width:200px;margin:12px auto;display:block;text-align:center;letter-spacing:.1em;font-size:1.1rem}
+.btn-edit{background:#e8f4fd;color:#1a6fa0}
+.btn-edit:hover{background:#aed6f1;color:#fff}
+.spv-actions{display:flex;gap:6px}
+.edit-form{display:none;margin-top:8px;padding:8px;background:#f8f9fa;border-radius:6px;gap:6px;flex-wrap:wrap}
+.edit-form.visible{display:flex}
+tfoot td{font-weight:800;text-align:center;background:var(--nuit)!important;color:#fff;font-size:.72rem;padding:5px 4px}
+tfoot td.agent-col{background:var(--nuit-mid)!important;color:#fff;text-align:left}
+tfoot td.zero{color:rgba(255,255,255,.35)}
+tfoot td.ok{color:#82e0aa}
 
 /* COMPTEURS */
 .compteurs{display:flex;gap:8px;margin-bottom:12px}
@@ -336,12 +345,41 @@ function majListeAdmin(){
   document.getElementById('nb-spv').textContent=listeAgents.length;
   const el=document.getElementById('liste-spv');
   if(!listeAgents.length){el.innerHTML='<div class="empty">Aucun SPV enregistré</div>';return;}
+  const grades=['Sapeur','Caporal','Caporal-chef','Sergent','Sergent-chef','Adjudant','Adjudant-chef','Lieutenant','Capitaine'];
   el.innerHTML=listeAgents.map(a=>`
-    <div class="spv-item">
-      <div><div class="spv-nom">${a.nom}</div><div class="spv-grade">${a.grade}</div></div>
-      <button class="btn-sm btn-danger" onclick="supprimerSPV('${a.id}')">Supprimer</button>
+    <div class="spv-item" style="flex-direction:column;align-items:stretch">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><div class="spv-nom">${a.nom}</div><div class="spv-grade">${a.grade}</div></div>
+        <div class="spv-actions">
+          <button class="btn-sm btn-edit" onclick="toggleEdit('${a.id}')">✏️ Modifier</button>
+          <button class="btn-sm btn-danger" onclick="supprimerSPV('${a.id}')">🗑️</button>
+        </div>
+      </div>
+      <div class="edit-form" id="edit-${a.id}">
+        <input type="text" id="edit-nom-${a.id}" value="${a.nom}" style="flex:2;min-width:120px;padding:6px 8px;font-size:.82rem"/>
+        <select id="edit-grade-${a.id}" style="flex:1;min-width:110px;padding:6px 8px;font-size:.82rem">
+          ${grades.map(g=>`<option ${g===a.grade?'selected':''}>${g}</option>`).join('')}
+        </select>
+        <button class="btn-sm btn-ok" onclick="modifierSPV('${a.id}')">✅ Sauver</button>
+      </div>
     </div>`).join('');
 }
+
+window.toggleEdit=function(id){
+  const f=document.getElementById('edit-'+id);
+  f.classList.toggle('visible');
+};
+
+window.modifierSPV=async function(id){
+  const nom=document.getElementById('edit-nom-'+id).value.trim().toUpperCase();
+  const grade=document.getElementById('edit-grade-'+id).value;
+  if(!nom||!grade){toast('⚠️ Renseigne nom et grade');return;}
+  try{
+    await setDoc(doc(db,'agents',id),{nom,grade,updatedAt:new Date().toISOString()},{merge:true});
+    await chargerAgents();
+    toast(`✅ ${grade} ${nom} mis à jour`);
+  }catch(e){toast('❌ '+e.message,5000);}
+};
 
 // ══════════════ PAGE AGENT ══════════════
 window.validerAgent=function(){
@@ -512,6 +550,10 @@ async function chargerTableauChef(){
   });
   html+='</tr></thead><tbody>';
 
+  // Compteur dispos par nuit
+  const totaux={};
+  nuits.forEach(d=>{ totaux[d.toISOString().slice(0,10)]=0; });
+
   listeAgents.forEach(agent=>{
     const rec=data[agent.id];
     html+=`<tr><td class="agent-col">${agent.grade}<br><strong>${agent.nom}</strong></td>`;
@@ -521,17 +563,25 @@ async function chargerTableauChef(){
       if(!n||!n.statut){
         html+=`<td class="cell-vide">—</td>`;
       } else if(n.statut==='dispo'){
+        totaux[key]++;
         html+=`<td class="cell-dispo">✓</td>`;
       } else if(n.statut==='indispo'){
         html+=`<td class="cell-indispo">✗</td>`;
       } else if(n.statut==='remplacement'){
+        totaux[key]++;
         const label=n.type==='echange'?`⇄${n.avec||'?'}`:`▶${n.avec||'?'}`;
         html+=`<td class="cell-rempl" title="${n.type==='echange'?'Échange':'Prend nuit de'} ${n.avec||''}">${label}</td>`;
       }
     });
     html+='</tr>';
   });
-  html+='</tbody>';
+  html+='</tbody><tfoot><tr><td class="agent-col">🧑‍🚒 Dispos</td>';
+  nuits.forEach(d=>{
+    const key=d.toISOString().slice(0,10);
+    const nb=totaux[key];
+    html+=`<td class="${nb===0?'zero':'ok'}">${nb===0?'—':nb}</td>`;
+  });
+  html+='</tr></tfoot>';
   table.innerHTML=html;
 
   // Récap remplacements
