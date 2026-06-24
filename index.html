@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Nuits SPV — CIS Saverdun</title>
+<style>
+:root {
+  --rouge: #c0392b;
+  --rouge-dark: #922b21;
+  --rouge-light: #f5e6e5;
+  --or: #f39c12;
+  --vert: #1e8449;
+  --vert-light: #d5f5e3;
+  --indispo: #922b21;
+  --indispo-light: #fadbd8;
+  --gris: #f4f4f4;
+  --gris-mid: #bbb;
+  --gris-dark: #444;
+  --blanc: #fff;
+  --nuit: #1a1f3c;
+  --nuit-mid: #2c3460;
+  --r: 8px;
+  --shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--gris);color:#222;min-height:100vh}
+
+/* HEADER */
+header{background:linear-gradient(135deg,var(--nuit),var(--nuit-mid));color:var(--blanc);padding:14px 18px;display:flex;align-items:center;gap:12px}
+header .ico{font-size:1.8rem}
+header h1{font-size:1.05rem;font-weight:800;letter-spacing:-.01em}
+header p{font-size:.75rem;opacity:.7;margin-top:1px}
+
+/* TABS */
+.tabs{display:flex;background:var(--nuit-mid)}
+.tab{flex:1;padding:11px 6px;border:none;background:transparent;color:rgba(255,255,255,.6);font-size:.82rem;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;transition:.2s;letter-spacing:.02em;text-transform:uppercase}
+.tab.active{color:#fff;border-bottom-color:var(--or);background:rgba(255,255,255,.06)}
+
+.page{display:none;padding:16px}
+.page.active{display:block}
+
+/* CARDS */
+.card{background:var(--blanc);border-radius:var(--r);padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card-titre{font-size:.8rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--rouge);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+
+/* SELECT / INPUT */
+select,input[type=text]{width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:6px;font-size:.95rem;outline:none;transition:border-color .2s;background:#fff}
+select:focus,input[type=text]:focus{border-color:var(--rouge)}
+.field-label{font-size:.78rem;font-weight:700;color:var(--gris-dark);margin-bottom:4px;display:block}
+
+/* BOUTONS */
+.btn{display:block;width:100%;padding:12px;border:none;border-radius:var(--r);font-size:.95rem;font-weight:700;cursor:pointer;transition:.18s}
+.btn-rouge{background:var(--rouge);color:#fff}
+.btn-rouge:hover{background:var(--rouge-dark)}
+.btn-nuit{background:var(--nuit);color:#fff}
+.btn-nuit:hover{background:var(--nuit-mid)}
+.btn-sm{padding:6px 12px;font-size:.78rem;border-radius:5px;border:none;cursor:pointer;font-weight:700}
+.btn-danger{background:#fadbd8;color:var(--indispo)}
+.btn-danger:hover{background:#f1948a;color:#fff}
+.btn-ok{background:var(--vert-light);color:var(--vert)}
+.btn-ok:hover{background:#82e0aa;color:#fff}
+.btn:disabled{background:#ccc;cursor:not-allowed}
+
+/* GRILLE NUITS - vue agent */
+.mois-titre{font-size:.95rem;font-weight:800;color:var(--nuit);margin-bottom:10px;text-align:center}
+.nuits-liste{display:flex;flex-direction:column;gap:6px}
+.nuit-row{display:grid;grid-template-columns:90px 1fr 1fr;align-items:center;gap:6px;padding:7px 10px;background:var(--gris);border-radius:6px;border-left:3px solid var(--gris-mid)}
+.nuit-row.dispo{background:var(--vert-light);border-left-color:var(--vert)}
+.nuit-row.indispo{background:var(--indispo-light);border-left-color:var(--indispo)}
+.nuit-row.remplacement{background:#fef9e7;border-left-color:var(--or)}
+.nuit-date{font-size:.8rem;font-weight:700;color:var(--nuit)}
+.nuit-date small{font-weight:400;color:#888;font-size:.7rem;display:block}
+.nuit-btns{display:flex;gap:5px}
+.nuit-btns button{flex:1;padding:6px 4px;border:2px solid transparent;border-radius:5px;font-size:.72rem;font-weight:700;cursor:pointer;transition:.15s;background:var(--blanc)}
+.nuit-btns button.sel-dispo{background:var(--vert);color:#fff;border-color:var(--vert)}
+.nuit-btns button.sel-indispo{background:var(--indispo);color:#fff;border-color:var(--indispo)}
+.nuit-btns button:not(.sel-dispo):not(.sel-indispo){color:#888;border-color:#ddd}
+.remplacement-zone{grid-column:1/-1;padding:8px;background:rgba(0,0,0,.03);border-radius:5px;display:none}
+.remplacement-zone.visible{display:block}
+.rempl-type{display:flex;gap:6px;margin-bottom:6px}
+.rempl-type button{flex:1;padding:5px;font-size:.72rem;font-weight:700;border:2px solid #ddd;border-radius:4px;background:#fff;cursor:pointer}
+.rempl-type button.active{border-color:var(--or);background:#fef9e7;color:#935116}
+.rempl-input{font-size:.82rem;padding:7px 10px;border:1.5px solid #ddd;border-radius:5px;width:100%;outline:none}
+.rempl-input:focus{border-color:var(--or)}
+
+/* TABLEAU CHEF */
+.tableau-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;font-size:.72rem;min-width:600px;width:100%}
+th,td{padding:5px 7px;border:1px solid #e0e0e0;white-space:nowrap}
+thead th{background:var(--nuit);color:#fff;font-weight:700;text-align:center;position:sticky;top:0;z-index:2}
+thead th.agent-col{background:var(--nuit-mid);text-align:left;position:sticky;left:0;z-index:3}
+tbody tr:nth-child(even) td{background:#f9f9f9}
+tbody td.agent-col{font-weight:700;position:sticky;left:0;background:#fff;z-index:1;border-right:2px solid #ccc}
+tbody tr:nth-child(even) td.agent-col{background:#f9f9f9}
+.cell-dispo{background:var(--vert-light)!important;color:var(--vert);text-align:center;font-size:.7rem;font-weight:700}
+.cell-indispo{background:var(--indispo-light)!important;color:var(--indispo);text-align:center;font-size:.7rem;font-weight:700}
+.cell-rempl{background:#fef9e7!important;color:#935116;text-align:center;font-size:.65rem;font-weight:700}
+.cell-vide{text-align:center;color:#ccc}
+
+/* LÉGENDE */
+.legende{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:.73rem}
+.leg{display:flex;align-items:center;gap:4px;font-weight:600}
+.leg-dot{width:12px;height:12px;border-radius:3px}
+
+/* ADMIN */
+.spv-item{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--blanc);border-radius:6px;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.spv-nom{font-weight:600;font-size:.9rem}
+.spv-grade{font-size:.75rem;color:#888}
+.add-form{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.add-form input,.add-form select{flex:1;min-width:100px;margin-bottom:0}
+.add-form button{white-space:nowrap}
+.admin-lock{text-align:center;padding:30px 20px}
+.admin-lock input{max-width:200px;margin:12px auto;display:block;text-align:center;letter-spacing:.1em;font-size:1.1rem}
+
+/* COMPTEURS */
+.compteurs{display:flex;gap:8px;margin-bottom:12px}
+.cpt{flex:1;background:var(--blanc);border-radius:var(--r);padding:10px;text-align:center;box-shadow:var(--shadow)}
+.cpt .nb{font-size:1.5rem;font-weight:800}
+.cpt .lb{font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;color:#888;font-weight:700}
+.cpt.v .nb{color:var(--vert)}
+.cpt.r .nb{color:var(--indispo)}
+.cpt.o .nb{color:var(--or)}
+
+/* TOAST */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--nuit);color:#fff;padding:10px 20px;border-radius:20px;font-size:.85rem;font-weight:700;opacity:0;transition:.25s;z-index:999;pointer-events:none}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* MOIS NAV */
+.mois-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.mois-nav button{background:var(--nuit);color:#fff;border:none;border-radius:5px;padding:5px 10px;cursor:pointer;font-size:.85rem}
+.mois-nav span{font-weight:800;color:var(--nuit);font-size:.95rem}
+
+.empty{text-align:center;padding:30px;color:#aaa;font-size:.9rem}
+
+/* RÉCAP remplacements */
+.rempl-list{margin-top:14px}
+.rempl-item{background:#fef9e7;border-left:3px solid var(--or);border-radius:5px;padding:8px 12px;margin-bottom:6px;font-size:.8rem}
+.rempl-item strong{color:var(--nuit)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="ico">🌙</div>
+  <div>
+    <h1>Nuits SPV — CIS Saverdun</h1>
+    <p>Disponibilités mensuelles</p>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('agent')">📋 Ma dispo</button>
+  <button class="tab" onclick="showTab('chef')">📊 Tableau chef</button>
+  <button class="tab" onclick="showTab('admin')">⚙️ Admin</button>
+</div>
+
+<!-- ══════════════ PAGE AGENT ══════════════ -->
+<div id="page-agent" class="page active">
+
+  <div class="card" id="card-ident">
+    <div class="card-titre">👤 Identification</div>
+    <span class="field-label">Ton nom</span>
+    <select id="sel-agent" style="margin-bottom:12px">
+      <option value="">— Choisir mon nom —</option>
+    </select>
+    <button class="btn btn-nuit" onclick="validerAgent()">Continuer →</button>
+  </div>
+
+  <div id="zone-saisie" style="display:none">
+    <div class="card">
+      <div class="card-titre">👤 Connecté·e</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:800;font-size:1rem" id="lbl-agent-connecte"></div>
+          <div style="font-size:.75rem;color:#888" id="lbl-grade-connecte"></div>
+        </div>
+        <button class="btn-sm btn-danger" onclick="deconnecter()">Changer</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="mois-nav">
+        <button onclick="changerMoisAgent(-1)">◀</button>
+        <span id="lbl-mois-agent"></span>
+        <button onclick="changerMoisAgent(1)">▶</button>
+      </div>
+      <div class="nuits-liste" id="nuits-liste"></div>
+    </div>
+
+    <button class="btn btn-rouge" onclick="enregistrerDispo()">✅ Enregistrer mes disponibilités</button>
+  </div>
+</div>
+
+<!-- ══════════════ PAGE CHEF ══════════════ -->
+<div id="page-chef" class="page">
+  <div class="card">
+    <div class="card-titre">📊 Récap mensuel</div>
+    <div class="mois-nav">
+      <button onclick="changerMoisChef(-1)">◀</button>
+      <span id="lbl-mois-chef"></span>
+      <button onclick="changerMoisChef(1)">▶</button>
+    </div>
+    <div class="compteurs">
+      <div class="cpt v"><div class="nb" id="cnt-dispo">—</div><div class="lb">Réponses</div></div>
+      <div class="cpt r"><div class="nb" id="cnt-manque">—</div><div class="lb">Sans réponse</div></div>
+      <div class="cpt o"><div class="nb" id="cnt-rempl">—</div><div class="lb">Remplacements</div></div>
+    </div>
+    <div class="legende">
+      <span class="leg"><span class="leg-dot" style="background:var(--vert)"></span>Dispo</span>
+      <span class="leg"><span class="leg-dot" style="background:var(--indispo)"></span>Indispo</span>
+      <span class="leg"><span class="leg-dot" style="background:var(--or)"></span>Rempl.</span>
+      <span class="leg"><span class="leg-dot" style="background:#eee;border:1px solid #ccc"></span>—</span>
+    </div>
+  </div>
+
+  <div class="card" style="padding:10px">
+    <div class="tableau-wrap">
+      <table id="tableau-chef"><tbody><tr><td class="empty">Chargement…</td></tr></tbody></table>
+    </div>
+  </div>
+
+  <div class="card rempl-list" id="zone-remplacements" style="display:none">
+    <div class="card-titre">🔄 Remplacements signalés</div>
+    <div id="liste-remplacements"></div>
+  </div>
+</div>
+
+<!-- ══════════════ PAGE ADMIN ══════════════ -->
+<div id="page-admin" class="page">
+  <div id="admin-lock-zone">
+    <div class="card admin-lock">
+      <div class="card-titre" style="justify-content:center">🔒 Accès administrateur</div>
+      <p style="font-size:.85rem;color:#888">Entre le code d'accès pour gérer les agents.</p>
+      <input type="password" id="inp-code" placeholder="Code" onkeydown="if(event.key==='Enter')verifierCode()"/>
+      <button class="btn btn-nuit" onclick="verifierCode()">Entrer</button>
+    </div>
+  </div>
+  <div id="admin-zone" style="display:none">
+    <div class="card">
+      <div class="card-titre">➕ Ajouter un SPV</div>
+      <div class="add-form">
+        <input type="text" id="inp-nom-add" placeholder="NOM Prénom"/>
+        <select id="inp-grade-add">
+          <option value="">Grade</option>
+          <option>Sapeur</option><option>Caporal</option><option>Caporal-chef</option>
+          <option>Sergent</option><option>Sergent-chef</option><option>Adjudant</option>
+          <option>Adjudant-chef</option><option>Lieutenant</option><option>Capitaine</option>
+        </select>
+        <button class="btn btn-sm btn-nuit" style="padding:10px 14px" onclick="ajouterSPV()">Ajouter</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-titre">👥 Liste des SPV (<span id="nb-spv">0</span>)</div>
+      <div id="liste-spv"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ══════════════ FIREBASE ══════════════ -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, getDocs, deleteDoc, collection, query, where }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyANbXv6Ypud3hHVLIR2mPgp_xqKKFxuCyQ",
+  authDomain: "dispo-spv-cis-saverdun.firebaseapp.com",
+  projectId: "dispo-spv-cis-saverdun",
+  storageBucket: "dispo-spv-cis-saverdun.firebasestorage.app",
+  messagingSenderId: "240757256207",
+  appId: "1:240757256207:web:b89e8aadd2835fe526337a",
+  measurementId: "G-EN6PXHNSMP"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const CODE_ADMIN = "saverdun2025"; // ← change ce code si tu veux
+
+// ── Utilitaires ──
+const JOURS = ["dim.","lun.","mar.","mer.","jeu.","ven.","sam."];
+const MOIS_NOM = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
+function toast(msg, dur=3000){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),dur);
+}
+
+function cleMois(y,m){ return `${y}-${String(m+1).padStart(2,'0')}`; }
+
+function nuitsduMois(y,m){
+  const nuits=[];
+  const nb=new Date(y,m+1,0).getDate();
+  for(let d=1;d<=nb;d++) nuits.push(new Date(y,m,d));
+  return nuits;
+}
+
+// ══════════════ ÉTAT ══════════════
+let agentConnecte=null; // {id, nom, grade}
+let listeAgents=[];
+let dispoAgent={}; // { "2025-07-01": { statut:"dispo"|"indispo"|"remplacement", type?:"prend"|"echange", avec?:"NOM" } }
+
+// Mois affiché agent
+let moisAgent = (()=>{const d=new Date(); return {y:d.getFullYear(),m:d.getMonth()+1<12?d.getMonth()+1:d.getMonth(), mIdx: d.getMonth()+1<12?d.getMonth()+1:d.getMonth()};})();
+// Simplifié : mois suivant par défaut
+const today=new Date();
+const defMois = today.getMonth()===11 ? {y:today.getFullYear()+1, mIdx:0} : {y:today.getFullYear(), mIdx:today.getMonth()+1};
+let moisAgentY=defMois.y, moisAgentM=defMois.mIdx;
+let moisChefY=defMois.y, moisChefM=defMois.mIdx;
+
+// ══════════════ AGENTS ══════════════
+async function chargerAgents(){
+  const snap=await getDocs(collection(db,"agents"));
+  listeAgents=[];
+  snap.forEach(d=>listeAgents.push({id:d.id,...d.data()}));
+  listeAgents.sort((a,b)=>a.nom.localeCompare(b.nom));
+  majSelectAgent();
+  majListeAdmin();
+}
+
+function majSelectAgent(){
+  const sel=document.getElementById('sel-agent');
+  sel.innerHTML='<option value="">— Choisir mon nom —</option>';
+  listeAgents.forEach(a=>{
+    const o=document.createElement('option');
+    o.value=a.id; o.textContent=`${a.grade} ${a.nom}`;
+    sel.appendChild(o);
+  });
+}
+
+function majListeAdmin(){
+  document.getElementById('nb-spv').textContent=listeAgents.length;
+  const el=document.getElementById('liste-spv');
+  if(!listeAgents.length){el.innerHTML='<div class="empty">Aucun SPV enregistré</div>';return;}
+  el.innerHTML=listeAgents.map(a=>`
+    <div class="spv-item">
+      <div><div class="spv-nom">${a.nom}</div><div class="spv-grade">${a.grade}</div></div>
+      <button class="btn-sm btn-danger" onclick="supprimerSPV('${a.id}')">Supprimer</button>
+    </div>`).join('');
+}
+
+// ══════════════ PAGE AGENT ══════════════
+window.validerAgent=function(){
+  const sel=document.getElementById('sel-agent');
+  if(!sel.value){toast('⚠️ Choisis ton nom dans la liste');return;}
+  const found=listeAgents.find(a=>a.id===sel.value);
+  if(!found){toast('Agent introuvable');return;}
+  agentConnecte=found;
+  document.getElementById('card-ident').style.display='none';
+  document.getElementById('zone-saisie').style.display='block';
+  document.getElementById('lbl-agent-connecte').textContent=agentConnecte.nom;
+  document.getElementById('lbl-grade-connecte').textContent=agentConnecte.grade;
+  chargerDispoAgent();
+};
+
+window.deconnecter=function(){
+  agentConnecte=null; dispoAgent={};
+  document.getElementById('card-ident').style.display='block';
+  document.getElementById('zone-saisie').style.display='none';
+};
+
+window.changerMoisAgent=function(dir){
+  moisAgentM+=dir;
+  if(moisAgentM>11){moisAgentM=0;moisAgentY++;}
+  if(moisAgentM<0){moisAgentM=11;moisAgentY--;}
+  chargerDispoAgent();
+};
+
+async function chargerDispoAgent(){
+  if(!agentConnecte) return;
+  const cle=cleMois(moisAgentY,moisAgentM);
+  document.getElementById('lbl-mois-agent').textContent=`${MOIS_NOM[moisAgentM]} ${moisAgentY}`;
+  try{
+    const snap=await getDoc(doc(db,"disponibilites",`${cle}_${agentConnecte.id}`));
+    dispoAgent = snap.exists() ? (snap.data().nuits||{}) : {};
+  }catch(e){ dispoAgent={}; }
+  rendreNuits();
+}
+
+function rendreNuits(){
+  const nuits=nuitsduMois(moisAgentY,moisAgentM);
+  const el=document.getElementById('nuits-liste');
+  el.innerHTML='';
+  nuits.forEach(date=>{
+    const key=date.toISOString().slice(0,10);
+    const d=dispoAgent[key]||{statut:null};
+    const jour=JOURS[date.getDay()];
+    const numJ=date.getDate();
+    const isWeekend=date.getDay()===0||date.getDay()===6;
+
+    const rowClass=d.statut==='dispo'?'dispo':d.statut==='indispo'?'indispo':d.statut==='remplacement'?'remplacement':'';
+    const rZoneVis=d.statut==='remplacement'?'visible':'';
+    const rType=d.type||'prend';
+    const rAvec=d.avec||'';
+
+    const row=document.createElement('div');
+    row.className=`nuit-row ${rowClass}`;
+    row.dataset.key=key;
+    row.innerHTML=`
+      <div class="nuit-date">
+        <span>${jour} ${numJ}</span>
+        ${isWeekend?'<small>Week-end</small>':''}
+      </div>
+      <div class="nuit-btns">
+        <button onclick="setStatut('${key}','dispo',this)" class="${d.statut==='dispo'?'sel-dispo':''}">✅ Dispo</button>
+        <button onclick="setStatut('${key}','indispo',this)" class="${d.statut==='indispo'?'sel-indispo':''}">❌ Indispo</button>
+        <button onclick="setStatut('${key}','remplacement',this)" class="${d.statut==='remplacement'?'sel-dispo':''}">🔄 Rempl.</button>
+      </div>
+      <div class="remplacement-zone ${rZoneVis}" id="rzone-${key}">
+        <div class="rempl-type">
+          <button onclick="setRemplType('${key}','prend',this)" class="${rType==='prend'?'active':''}">Je prends une nuit de…</button>
+          <button onclick="setRemplType('${key}','echange',this)" class="${rType==='echange'?'active':''}">Échange avec…</button>
+        </div>
+        <input class="rempl-input" id="rempl-avec-${key}" placeholder="Nom du collègue" value="${rAvec}" oninput="setRemplAvec('${key}',this.value)"/>
+      </div>`;
+    el.appendChild(row);
+  });
+}
+
+window.setStatut=function(key,statut,btn){
+  if(!dispoAgent[key]) dispoAgent[key]={statut:null};
+  // Toggle
+  if(dispoAgent[key].statut===statut){ dispoAgent[key].statut=null; }
+  else { dispoAgent[key].statut=statut; }
+
+  const row=document.querySelector(`.nuit-row[data-key="${key}"]`);
+  row.className='nuit-row '+(dispoAgent[key].statut||'');
+  // Boutons
+  row.querySelectorAll('.nuit-btns button').forEach(b=>{ b.className=''; });
+  if(dispoAgent[key].statut==='dispo') btn.className='sel-dispo';
+  if(dispoAgent[key].statut==='indispo') btn.className='sel-indispo';
+  if(dispoAgent[key].statut==='remplacement') btn.className='sel-dispo';
+  // Zone remplacement
+  const rzone=document.getElementById(`rzone-${key}`);
+  if(rzone) rzone.className='remplacement-zone '+(dispoAgent[key].statut==='remplacement'?'visible':'');
+};
+
+window.setRemplType=function(key,type,btn){
+  if(!dispoAgent[key]) dispoAgent[key]={};
+  dispoAgent[key].type=type;
+  btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+};
+
+window.setRemplAvec=function(key,val){
+  if(!dispoAgent[key]) dispoAgent[key]={};
+  dispoAgent[key].avec=val;
+};
+
+window.enregistrerDispo=async function(){
+  if(!agentConnecte){toast('Non identifié');return;}
+  const cle=cleMois(moisAgentY,moisAgentM);
+  // Nettoyer les nuits sans statut
+  const propre={};
+  Object.entries(dispoAgent).forEach(([k,v])=>{ if(v.statut) propre[k]=v; });
+  try{
+    await setDoc(doc(db,"disponibilites",`${cle}_${agentConnecte.id}`),{
+      agentId:agentConnecte.id, nom:agentConnecte.nom, grade:agentConnecte.grade,
+      mois:cle, nuits:propre, updatedAt:new Date().toISOString()
+    });
+    toast('✅ Disponibilités enregistrées !');
+  }catch(e){toast('❌ Erreur : '+e.message,5000);}
+};
+
+// ══════════════ PAGE CHEF ══════════════
+window.changerMoisChef=function(dir){
+  moisChefM+=dir;
+  if(moisChefM>11){moisChefM=0;moisChefY++;}
+  if(moisChefM<0){moisChefM=11;moisChefY--;}
+  chargerTableauChef();
+};
+
+async function chargerTableauChef(){
+  document.getElementById('lbl-mois-chef').textContent=`${MOIS_NOM[moisChefM]} ${moisChefY}`;
+  const cle=cleMois(moisChefY,moisChefM);
+  const nuits=nuitsduMois(moisChefY,moisChefM);
+
+  // Charger toutes les dispos du mois
+  const snap=await getDocs(collection(db,"disponibilites"));
+  const data={};
+  snap.forEach(d=>{
+    const rec=d.data();
+    if(rec.mois===cle) data[rec.agentId]=rec;
+  });
+
+  // Compteurs
+  const avecReponse=Object.keys(data).length;
+  document.getElementById('cnt-dispo').textContent=avecReponse;
+  document.getElementById('cnt-manque').textContent=listeAgents.length-avecReponse;
+  let nbRempl=0;
+  Object.values(data).forEach(rec=>{
+    Object.values(rec.nuits||{}).forEach(n=>{ if(n.statut==='remplacement') nbRempl++; });
+  });
+  document.getElementById('cnt-rempl').textContent=nbRempl;
+
+  // Tableau
+  const table=document.getElementById('tableau-chef');
+  if(!listeAgents.length){
+    table.innerHTML='<tbody><tr><td class="empty">Aucun agent enregistré</td></tr></tbody>';
+    return;
+  }
+
+  let html='<thead><tr><th class="agent-col">Agent</th>';
+  nuits.forEach(d=>{
+    const j=JOURS[d.getDay()];
+    const we=d.getDay()===0||d.getDay()===6;
+    html+=`<th style="${we?'background:#2c3460':''}">${j}<br>${d.getDate()}</th>`;
+  });
+  html+='</tr></thead><tbody>';
+
+  listeAgents.forEach(agent=>{
+    const rec=data[agent.id];
+    html+=`<tr><td class="agent-col">${agent.grade}<br><strong>${agent.nom}</strong></td>`;
+    nuits.forEach(d=>{
+      const key=d.toISOString().slice(0,10);
+      const n=rec?.nuits?.[key];
+      if(!n||!n.statut){
+        html+=`<td class="cell-vide">—</td>`;
+      } else if(n.statut==='dispo'){
+        html+=`<td class="cell-dispo">✓</td>`;
+      } else if(n.statut==='indispo'){
+        html+=`<td class="cell-indispo">✗</td>`;
+      } else if(n.statut==='remplacement'){
+        const label=n.type==='echange'?`⇄${n.avec||'?'}`:`▶${n.avec||'?'}`;
+        html+=`<td class="cell-rempl" title="${n.type==='echange'?'Échange':'Prend nuit de'} ${n.avec||''}">${label}</td>`;
+      }
+    });
+    html+='</tr>';
+  });
+  html+='</tbody>';
+  table.innerHTML=html;
+
+  // Récap remplacements
+  const listeR=[];
+  listeAgents.forEach(agent=>{
+    const rec=data[agent.id];
+    Object.entries(rec?.nuits||{}).forEach(([key,n])=>{
+      if(n.statut==='remplacement'){
+        const d=new Date(key+'T12:00:00');
+        listeR.push({agent:agent.nom, grade:agent.grade, date:`${JOURS[d.getDay()]} ${d.getDate()} ${MOIS_NOM[d.getMonth()]}`, type:n.type, avec:n.avec});
+      }
+    });
+  });
+  const zoneR=document.getElementById('zone-remplacements');
+  if(listeR.length){
+    zoneR.style.display='block';
+    document.getElementById('liste-remplacements').innerHTML=listeR.map(r=>`
+      <div class="rempl-item">
+        <strong>${r.grade} ${r.agent}</strong> — ${r.date}<br>
+        ${r.type==='echange'
+          ?`🔄 Échange avec <strong>${r.avec||'?'}</strong>`
+          :`▶ Prend la nuit de <strong>${r.avec||'?'}</strong>`}
+      </div>`).join('');
+  } else { zoneR.style.display='none'; }
+}
+
+// ══════════════ ADMIN ══════════════
+window.verifierCode=function(){
+  const code=document.getElementById('inp-code').value;
+  if(code===CODE_ADMIN){
+    document.getElementById('admin-lock-zone').style.display='none';
+    document.getElementById('admin-zone').style.display='block';
+    majListeAdmin();
+  } else { toast('❌ Code incorrect'); }
+};
+
+window.ajouterSPV=async function(){
+  const nom=document.getElementById('inp-nom-add').value.trim().toUpperCase();
+  const grade=document.getElementById('inp-grade-add').value;
+  if(!nom||!grade){toast('⚠️ Renseigne nom et grade');return;}
+  const id=nom.replace(/\s+/g,'_').toLowerCase()+'_'+Date.now();
+  try{
+    await setDoc(doc(db,"agents",id),{nom,grade,createdAt:new Date().toISOString()});
+    document.getElementById('inp-nom-add').value='';
+    document.getElementById('inp-grade-add').value='';
+    await chargerAgents();
+    toast(`✅ ${grade} ${nom} ajouté`);
+  }catch(e){toast('❌ '+e.message,5000);}
+};
+
+window.supprimerSPV=async function(id){
+  if(!confirm('Supprimer cet agent ?')) return;
+  try{
+    await deleteDoc(doc(db,"agents",id));
+    await chargerAgents();
+    toast('🗑️ Agent supprimé');
+  }catch(e){toast('❌ '+e.message,5000);}
+};
+
+// ══════════════ ONGLETS ══════════════
+window.showTab=function(tab){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  const idx={agent:0,chef:1,admin:2}[tab];
+  document.querySelectorAll('.tab')[idx].classList.add('active');
+  if(tab==='chef') chargerTableauChef();
+};
+
+// ══════════════ INIT ══════════════
+document.getElementById('lbl-mois-agent').textContent=`${MOIS_NOM[moisAgentM]} ${moisAgentY}`;
+document.getElementById('lbl-mois-chef').textContent=`${MOIS_NOM[moisChefM]} ${moisChefY}`;
+chargerAgents();
+</script>
+</body>
+</html>
